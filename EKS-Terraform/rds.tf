@@ -4,8 +4,8 @@ resource "aws_db_instance" "rds" {
   identifier              = "microservices-rds"
   db_subnet_group_name    = aws_db_subnet_group.sub-grp.name
   engine                  = "mysql"
-  engine_version          = "8.4.3"
-  instance_class          = "db.t4g.micro" # Free-tier eligible (or "db.t3.micro")
+  engine_version          = "8.4"          # Updated to 8.4 to avoid invalid version errors
+  instance_class          = "db.t4g.micro" # Free-tier eligible
   multi_az                = false          # Must be false for Free Tier
   db_name                 = "mydb"
   username                = "admin"
@@ -14,7 +14,6 @@ resource "aws_db_instance" "rds" {
   vpc_security_group_ids  = [aws_security_group.allow_all.id]
   publicly_accessible     = false          # Must be false for private subnets
   
-  # FIXED: Set to 0 to bypass Free Tier backup retention restrictions
   backup_retention_period = 0 
 
   tags = {
