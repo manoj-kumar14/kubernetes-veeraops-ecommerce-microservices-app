@@ -1,3 +1,4 @@
+
 name: infra Terraform
 
 on:
@@ -20,9 +21,6 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ----------------------------------------------------------
-      # AWS AUTHENTICATION
-      # ----------------------------------------------------------
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -31,12 +29,8 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Verify AWS Identity
-        run: |
-          aws sts get-caller-identity
+        run: aws sts get-caller-identity
 
-      # ----------------------------------------------------------
-      # TERRAFORM SETUP & EXECUTION
-      # ----------------------------------------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -61,11 +55,26 @@ jobs:
         run: |
           aws s3api head-bucket \
             --bucket "${{ env.BUCKET_NAME }}"
-
           echo "S3 bucket is available."
-      
+
       - name: Terraform Version
         run: terraform version
+
+      # DEBUG STEP
+      - name: Debug Terraform Configuration
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          echo "Current directory:"
+          pwd
+
+          echo "Terraform files:"
+          ls -la
+
+          echo "Engine versions:"
+          grep -Rn "engine_version" . --include="*.tf"
+
+          echo "Checking old MySQL version:"
+          grep -Rn "8.4.3" . --include="*.tf" || true
 
       - name: Terraform Init
         working-directory: ${{ env.TF_WORKING_DIR }}
