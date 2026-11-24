@@ -1,11 +1,10 @@
-name: infra Terraform
+name: infra Terraform S3 Backend
 
 on:
   workflow_dispatch:
 
-# PREVENTS CONCURRENT RUNS THAT CAUSE STATE CONFLICTS
 concurrency:
-  group: terraform-deployment
+  group: terraform-production
   cancel-in-progress: false
 
 env:
@@ -25,6 +24,9 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # ----------------------------------------------------------
+      # AWS AUTHENTICATION
+      # ----------------------------------------------------------
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -32,24 +34,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # ----------------------------------------------------------
+      # TERRAFORM SETUP & EXECUTION
+      # ----------------------------------------------------------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Create S3 Bucket if not exists
+      - name: Ensure S3 State Bucket Exists
         run: |
-          BUCKET_NAME="${{ env.BUCKET_NAME }}"
-          AWS_REGION="${{ env.AWS_REGION }}"
-
-          if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
-            echo "Bucket already exists. Skipping creation."
+          if aws s3api head-bucket --bucket "${{ env.BUCKET_NAME }}" 2>/dev/null; then
+            echo "S3 state bucket already exists."
           else
-            echo "Bucket does not exist. Creating..."
-            aws s3api create-bucket \
-              --bucket "$BUCKET_NAME" \
-              --region "$AWS_REGION"
-            echo "Bucket created successfully."
+            aws s3api create-bucket --bucket "${{ env.BUCKET_NAME }}" --region "${{ env.AWS_REGION }}"
+            echo "S3 state bucket created successfully."
           fi
 
       - name: Terraform Init
@@ -63,3 +62,7 @@ jobs:
       - name: Terraform Apply
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: terraform apply -auto-approve
+
+      - name: Terraform Outputs
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform output
